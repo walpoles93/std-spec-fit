@@ -8,7 +8,7 @@ from random import random
 
 SW = (0.0, 10.0)
 LB = 0.1
-NF = 1
+NF = 0.5
 
 def points(sw=SW, step=0.01):
     return np.arange(sw[0], sw[1] + step, step)
@@ -28,6 +28,14 @@ def spectrum(peak_list, points):
         return peak(peak_list[0, 0], peak_list[0,1], points)
     return peak(peak_list[0, 0], peak_list[0,1], points) + spectrum(peak_list[1:], points)
     
+def std_peak(x0, coupling, points, std):
+    return peak(x0, coupling, points) * std
+    
+def std_spectrum(peak_list, points, std_list):
+    if(len(peak_list) == 1):
+        return std_peak(peak_list[0, 0], peak_list[0,1], points, std_list[0])
+    return std_peak(peak_list[0, 0], peak_list[0,1], points, std_list[0]) + std_spectrum(peak_list[1:], points, std_list[1:])    
+    
 def noisify(spectrum, nf=NF):
     F = np.vectorize(lambda x:x + ((0.5 - random()) * nf))
     return F(spectrum)
@@ -39,10 +47,15 @@ peak_list = np.array([
     [4, [2]],
     [6, [2,2,4,5]]
     ], dtype=object)
+std_list = [0.05, 0.1, 0.13, 0.02]
     
 spec = spectrum(peak_list, shift_points)
 noisy_spec = noisify(spec)
 
+std_spec = std_spectrum(peak_list, shift_points, std_list)
+noisy_std = noisify(std_spec)
+
 plt.figure()
 sns.lineplot(x=shift_points, y=noisy_spec)
+sns.lineplot(x=shift_points, y=noisy_std)
 plt.savefig('lorentzian.png')
