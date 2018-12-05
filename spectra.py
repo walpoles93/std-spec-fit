@@ -1,6 +1,8 @@
 import numpy as np
 import pandas as pd
 from scipy.spatial.distance import pdist, squareform
+from scipy.optimize import minimize
+from scipy.optimize import Bounds
 import matplotlib.pyplot as plt
 import seaborn as sns
 from math import pi
@@ -39,6 +41,12 @@ def std_spectrum(peak_list, points, std_list):
 def noisify(spectrum, nf=NF):
     F = np.vectorize(lambda x:x + ((0.5 - random()) * nf))
     return F(spectrum)
+    
+def solve_intensity(spectrum, peak_list, points):
+    def F(x):
+        predict = std_spectrum(peak_list, points, x) #TODO rename this function
+        return np.sum((spectrum - predict)**2)
+    return minimize(F, np.ones(len(peak_list)), bounds=Bounds(0, np.inf)).x
 
 shift_points = points()    
 peak_list = np.array([
@@ -55,7 +63,13 @@ noisy_spec = noisify(spec)
 std_spec = std_spectrum(peak_list, shift_points, std_list)
 noisy_std = noisify(std_spec)
 
+spec_intensities = solve_intensity(noisy_spec, peak_list, shift_points)
+std_intensities = solve_intensity(noisy_std, peak_list, shift_points)
+print(std_intensities)
+predicted_std_spec = std_spectrum(peak_list, shift_points, std_intensities)
+
 plt.figure()
 sns.lineplot(x=shift_points, y=noisy_spec)
 sns.lineplot(x=shift_points, y=noisy_std)
+sns.lineplot(x=shift_points, y=predicted_std_spec)
 plt.savefig('lorentzian.png')
